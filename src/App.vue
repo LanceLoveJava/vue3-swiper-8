@@ -8,21 +8,20 @@
     @slideChange="onSlideChange"
   >
     <template v-for="(item, index) in arrList" :key="index">
-      <swiper-slide :virtualIndex="index" @click="videoClick(item)">
+      <swiper-slide :virtualIndex="index">
         <video
           :id="'video-play-' + index"
-          width="300"
           class="video-custom"
           preload="metadata"
           loop
-          :autoplay="item.autoplay"
-          @click.stop="videoClick(item, index)"
+          @click.stop="videoClick()"
         >
           <source
             :src="'http://zjjbk.hn-xinhua.cn' + item.VideoPath"
             type="video/mp4"
           />
         </video>
+        <div v-show="mon" class="play" @click="videoClick">▶</div>
       </swiper-slide>
     </template>
   </swiper>
@@ -32,7 +31,7 @@
 import { Virtual } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/vue/swiper-vue.js";
 import "swiper/swiper.min.css";
-import { ref, onBeforeMount } from "vue";
+import { ref, onBeforeMount, onMounted } from "vue";
 export default {
   name: "App",
   components: {
@@ -41,6 +40,8 @@ export default {
   },
   setup() {
     let arrList = ref([]);
+    let swiperInit = ref(null);
+    let mon = ref(false);
     let videoList = [
       {
         Id: 6,
@@ -174,54 +175,57 @@ export default {
         IsLauds: 0,
       },
     ];
-    let videoCollection = []
-    // arrList.value = Array.from({length: 100}).map((arr,index) => `Slide ${index + 1}`)
+    let videoCollection = null;
     onBeforeMount(() => {
-      let arr = videoList.map((item) => {
-        item.autoplay = false
-        return item
-      })
-      arrList.value = [...arr]
-      arrList.value[0].autoplay = true
+      let arr = videoList.map((item) => item);
+      arrList.value = [...arr];
+    });
+    onMounted(() => {
+      if (videoCollection) {
+        setTimeout(() => {
+        const element = videoCollection.item(0);
+        mon.value = element.paused
+        }, 300);
+      }
     });
     const onSwiper = (swiper) => {
-      console.log(swiper);
-      videoCollection = document.getElementsByTagName('video')
-      console.log(videoCollection, videoCollection.length)
+      swiperInit.value = swiper;
+      // 获取video集合，会动态及时更新
+      videoCollection = document.getElementsByTagName("video");
     };
     const onSlideChange = (swiper) => {
-      let element = document.getElementById('video-play-' + swiper.activeIndex)
-      let arrayV = Array.from(videoCollection)
+      let element = document.getElementById("video-play-" + swiper.activeIndex);
+      let arrayV = Array.from(videoCollection);
       arrayV.map((node) => {
-        node.pause()
-      })
+        node.pause();
+      });
+      mon.value = true
       if (element) {
-        element.play()
+        element.play();
+        mon.value = false
       }
-      if (swiper.activeIndex === arrList.value.length -1) {
-        let arr = videoList.slice().sort(() => Math.random() - .5)
-        arrList.value = [ ...arrList.value , ...arr]
+      if (swiper.activeIndex === arrList.value.length - 1) {
+        let arr = videoList.slice().sort(() => Math.random() - 0.5);
+        arrList.value = [...arrList.value, ...arr];
       }
     };
-    const onVirtualEvent = () => {
-      console.log(11)
-    }
-    const videoClick = (node, index) => {
-      let element = document.getElementById('video-play-' + index)
-      console.log(element)
+    const videoClick = () => {
+      let element = document.getElementById("video-play-" + swiperInit.value.activeIndex);
       if (element.paused) {
-        element.play()
+        element.play();
+        mon.value = false
       } else {
-        element.pause()
+        element.pause();
+        mon.value = true
       }
     };
     return {
       onSwiper,
       onSlideChange,
       Virtual,
+      mon,
       arrList,
       videoClick,
-      onVirtualEvent,
     };
   },
 };
@@ -256,5 +260,16 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+.play {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  font-size: 80px;
+  line-height: 100vh;
+  background-color: #000000a8;
+  z-index: 10;
 }
 </style>
